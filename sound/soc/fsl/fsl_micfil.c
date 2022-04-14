@@ -200,7 +200,7 @@ static const struct soc_enum fsl_micfil_hwvad_zcdauto_enum =
 			    micfil_hwvad_zcdauto_enable);
 static const struct soc_enum fsl_micfil_hwvad_ndec_enum =
 	SOC_ENUM_SINGLE(REG_MICFIL_VAD0_NCONFIG,
-			MICFIL_VAD0_NCONFIG_NOREN_SHIFT,
+			MICFIL_VAD0_NCONFIG_NOREN,
 			ARRAY_SIZE(micfil_hwvad_noise_decimation),
 			micfil_hwvad_noise_decimation);
 static const struct soc_enum fsl_micfil_hwvad_rate_enum =
@@ -840,7 +840,7 @@ static int fsl_micfil_reset(struct device *dev)
 
 	ret = regmap_update_bits(micfil->regmap,
 				 REG_MICFIL_CTRL1,
-				 MICFIL_CTRL1_MDIS_MASK,
+				 MICFIL_CTRL1_MDIS,
 				 0);
 	if (ret) {
 		dev_err(dev, "failed to clear MDIS bit %d\n", ret);
@@ -849,7 +849,7 @@ static int fsl_micfil_reset(struct device *dev)
 
 	ret = regmap_update_bits(micfil->regmap,
 				 REG_MICFIL_CTRL1,
-				 MICFIL_CTRL1_SRES_MASK,
+				 MICFIL_CTRL1_SRES,
 				 MICFIL_CTRL1_SRES);
 	if (ret) {
 		dev_err(dev, "failed to reset MICFIL: %d\n", ret);
@@ -892,7 +892,7 @@ static int configure_hwvad_interrupts(struct device *dev,
 
 	/* Voice Activity Detector Error Interruption Enable */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_ERIE_MASK,
+				 MICFIL_VAD0_CTRL1_ERIE,
 				 vaderie_reg);
 	if (ret) {
 		dev_err(dev,
@@ -903,7 +903,7 @@ static int configure_hwvad_interrupts(struct device *dev,
 
 	/* Voice Activity Detector Interruption Enable */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_IE_MASK,
+				 MICFIL_VAD0_CTRL1_IE,
 				 vadie_reg);
 	if (ret) {
 		dev_err(dev,
@@ -922,7 +922,7 @@ static int init_hwvad_internal_filters(struct device *dev)
 
 	/* Voice Activity Detector Internal Filters Initialization*/
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_ST10_MASK,
+				 MICFIL_VAD0_CTRL1_ST10,
 				 MICFIL_VAD0_CTRL1_ST10);
 	if (ret) {
 		dev_err(dev,
@@ -938,7 +938,7 @@ static int init_hwvad_internal_filters(struct device *dev)
 
 	/* Voice Activity Detector Enabled */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_ST10_MASK,
+				 MICFIL_VAD0_CTRL1_ST10,
 				 0);
 	if (ret) {
 		dev_err(dev,
@@ -988,7 +988,7 @@ static int __maybe_unused init_zcd(struct device *dev)
 
 	/* Zero-Crossing Detector AND Behavior */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_ZCD,
-				 MICFIL_VAD0_ZCD_ZCDAND_MASK,
+				 MICFIL_VAD0_ZCD_ZCDAND,
 				 MICFIL_HWVAD_ZCDAND);
 	if (ret) {
 		dev_err(dev, "Failed to set ZCDAND in ZCD_VAD0 [%d]\n", ret);
@@ -997,7 +997,7 @@ static int __maybe_unused init_zcd(struct device *dev)
 
 	/* Zero-Crossing Detector Automatic Threshold */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_ZCD,
-				 MICFIL_VAD0_ZCD_ZCDAUT_MASK,
+				 MICFIL_VAD0_ZCD_ZCDAUT,
 				 micfil->vad_zcd_auto);
 	if (ret) {
 		dev_err(dev,
@@ -1008,7 +1008,7 @@ static int __maybe_unused init_zcd(struct device *dev)
 
 	/* Zero-Crossing Detector Enable */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_ZCD,
-				 MICFIL_VAD0_ZCD_ZCDEN_MASK,
+				 MICFIL_VAD0_ZCD_ZCDEN,
 				 MICFIL_VAD0_ZCD_ZCDEN);
 	if (ret) {
 		dev_err(dev, "Failed to set ZCDEN in ZCD_VAD0 [%d]\n", ret);
@@ -1030,7 +1030,7 @@ static int init_hwvad_energy_mode(struct device *dev)
 
 	/* Voice Activity Detector Reset */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_RST_SHIFT,
+				 MICFIL_VAD0_CTRL1_RST,
 				 MICFIL_VAD0_CTRL1_RST);
 	if (ret) {
 		dev_err(dev, "Failed to set VADRST in CTRL1_VAD0 [%d]\n", ret);
@@ -1039,7 +1039,7 @@ static int init_hwvad_energy_mode(struct device *dev)
 
 	/* Voice Activity Detector Enabled */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_EN_MASK,
+				 MICFIL_VAD0_CTRL1_EN,
 				 MICFIL_VAD0_CTRL1_EN);
 	if (ret) {
 		dev_err(dev, "Failed to set VADEN in CTRL1_VAD0 [%d]\n", ret);
@@ -1061,7 +1061,7 @@ static int init_hwvad_energy_mode(struct device *dev)
 
 	/* Enable MICFIL module */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_CTRL1,
-				 MICFIL_CTRL1_PDMIEN_MASK,
+				 MICFIL_CTRL1_PDMIEN,
 				 MICFIL_CTRL1_PDMIEN);
 	if (ret) {
 		dev_err(dev, "failed to enable the module\n");
@@ -1077,7 +1077,7 @@ static int init_hwvad_energy_mode(struct device *dev)
 			return ret;
 		}
 
-		flag = (stat & MICFIL_VAD0_STAT_INITF_MASK);
+		flag = (stat & MICFIL_VAD0_STAT_INITF);
 		if (flag == 0)
 			break;
 
@@ -1107,7 +1107,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Frame energy disable */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL2,
-				 MICFIL_VAD0_CTRL2_FRENDIS_MASK,
+				 MICFIL_VAD0_CTRL2_FRENDIS,
 				 MICFIL_VAD0_CTRL2_FRENDIS);
 	if (ret) {
 		dev_err(dev, "Failed to set FRENDIS in CTRL2_VAD0 [%d]\n", ret);
@@ -1116,7 +1116,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Enable pre-filter Noise & Signal */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL2,
-				 MICFIL_VAD0_CTRL2_PREFEN_MASK,
+				 MICFIL_VAD0_CTRL2_PREFEN,
 				 MICFIL_VAD0_CTRL2_PREFEN);
 	if (ret) {
 		dev_err(dev, "Failed to set PREFEN in CTRL2_VAD0 [%d]\n", ret);
@@ -1125,7 +1125,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Enable Signal Filter */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_SCONFIG,
-				 MICFIL_VAD0_SCONFIG_SFILEN_MASK,
+				 MICFIL_VAD0_SCONFIG_SFILEN,
 				 MICFIL_VAD0_SCONFIG_SFILEN);
 	if (ret) {
 		dev_err(dev,
@@ -1136,7 +1136,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Signal Maximum Enable */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_SCONFIG,
-				 MICFIL_VAD0_SCONFIG_SMAXEN_MASK,
+				 MICFIL_VAD0_SCONFIG_SMAXEN,
 				 MICFIL_VAD0_SCONFIG_SMAXEN);
 	if (ret) {
 		dev_err(dev,
@@ -1149,7 +1149,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 	 * information
 	 */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_NCONFIG,
-				 MICFIL_VAD0_NCONFIG_NFILAUT_MASK,
+				 MICFIL_VAD0_NCONFIG_NFILAUT,
 				 0);
 	if (ret) {
 		dev_err(dev,
@@ -1160,7 +1160,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Noise Minimum Enable */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_NCONFIG,
-				 MICFIL_VAD0_NCONFIG_NMINEN_MASK,
+				 MICFIL_VAD0_NCONFIG_NMINEN,
 				 MICFIL_VAD0_NCONFIG_NMINEN);
 	if (ret) {
 		dev_err(dev,
@@ -1171,7 +1171,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Noise Decimation Enable */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_NCONFIG,
-				 MICFIL_VAD0_NCONFIG_NDECEN_MASK,
+				 MICFIL_VAD0_NCONFIG_NDECEN,
 				 MICFIL_VAD0_NCONFIG_NDECEN);
 	if (ret) {
 		dev_err(dev,
@@ -1182,7 +1182,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Voice Activity Detector Reset */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_RST_MASK,
+				 MICFIL_VAD0_CTRL1_RST,
 				 MICFIL_VAD0_CTRL1_RST);
 	if (ret) {
 		dev_err(dev, "Failed to set VADRST in CTRL1_VAD0 [%d]\n", ret);
@@ -1196,7 +1196,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Voice Activity Detector Enabled */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_EN_MASK,
+				 MICFIL_VAD0_CTRL1_EN,
 				 MICFIL_VAD0_CTRL1_EN);
 	if (ret) {
 		dev_err(dev, "Failed to set VADEN in CTRL1_VAD0 [%d]\n", ret);
@@ -1205,7 +1205,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Enable MICFIL module */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_CTRL1,
-				 MICFIL_CTRL1_PDMIEN_MASK,
+				 MICFIL_CTRL1_PDMIEN,
 				 MICFIL_CTRL1_PDMIEN);
 	if (ret) {
 		dev_err(dev, "failed to enable the module\n");
@@ -1226,7 +1226,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 			return ret;
 		}
 
-		flag = (stat & MICFIL_VAD0_STAT_INITF_MASK);
+		flag = (stat & MICFIL_VAD0_STAT_INITF);
 		if (flag == 0)
 			break;
 
@@ -1529,7 +1529,7 @@ static int fsl_micfil_trigger(struct snd_pcm_substream *substream, int cmd,
 
 		/* Enable the module */
 		ret = regmap_update_bits(micfil->regmap, REG_MICFIL_CTRL1,
-					 MICFIL_CTRL1_PDMIEN_MASK,
+					 MICFIL_CTRL1_PDMIEN,
 					 MICFIL_CTRL1_PDMIEN);
 		if (ret) {
 			dev_err(dev, "failed to enable the module\n");
@@ -1542,7 +1542,7 @@ static int fsl_micfil_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		/* Disable the module */
 		ret = regmap_update_bits(micfil->regmap, REG_MICFIL_CTRL1,
-					 MICFIL_CTRL1_PDMIEN_MASK,
+					 MICFIL_CTRL1_PDMIEN,
 					 0);
 		if (ret) {
 			dev_err(dev, "failed to enable the module\n");
@@ -1625,7 +1625,7 @@ static int fsl_micfil_hw_params(struct snd_pcm_substream *substream,
 	if (hwvad_state == MICFIL_HWVAD_OFF) {
 		/* 1. Disable the module */
 		ret = regmap_update_bits(micfil->regmap, REG_MICFIL_CTRL1,
-					 MICFIL_CTRL1_PDMIEN_MASK, 0);
+					 MICFIL_CTRL1_PDMIEN, 0);
 		if (ret) {
 			dev_err(dev, "failed to disable the module\n");
 			return ret;
@@ -1944,10 +1944,10 @@ static irqreturn_t hwvad_isr(int irq, void *devid)
 	 * 1 to Clear. Since both flags are set, it is enough
 	 * to only read one of them
 	 */
-	if (vad0_reg & MICFIL_VAD0_STAT_IF_MASK) {
+	if (vad0_reg & MICFIL_VAD0_STAT_IF) {
 		/* Write 1 to clear */
 		regmap_write_bits(micfil->regmap, REG_MICFIL_VAD0_STAT,
-				  MICFIL_VAD0_STAT_IF_MASK,
+				  MICFIL_VAD0_STAT_IF,
 				  MICFIL_VAD0_STAT_IF);
 
 		/* disable hwvad interrupts */
@@ -1967,10 +1967,10 @@ static irqreturn_t hwvad_err_isr(int irq, void *devid)
 
 	regmap_read(micfil->regmap, REG_MICFIL_VAD0_STAT, &vad0_reg);
 
-	if (vad0_reg & MICFIL_VAD0_STAT_INSATF_MASK)
+	if (vad0_reg & MICFIL_VAD0_STAT_INSATF)
 		dev_dbg(dev, "voice activity input overflow/underflow detected\n");
 
-	if (vad0_reg & MICFIL_VAD0_STAT_INITF_MASK)
+	if (vad0_reg & MICFIL_VAD0_STAT_INITF)
 		dev_dbg(dev, "voice activity dectector is initializing\n");
 
 	return IRQ_HANDLED;
@@ -2030,16 +2030,16 @@ static irqreturn_t micfil_err_isr(int irq, void *devid)
 
 	regmap_read(micfil->regmap, REG_MICFIL_STAT, &stat_reg);
 
-	if (stat_reg & MICFIL_STAT_BSY_FIL_MASK)
+	if (stat_reg & MICFIL_STAT_BSY_FIL)
 		dev_dbg(&pdev->dev, "isr: Decimation Filter is running\n");
 
-	if (stat_reg & MICFIL_STAT_FIR_RDY_MASK)
+	if (stat_reg & MICFIL_STAT_FIR_RDY)
 		dev_dbg(&pdev->dev, "isr: FIR Filter Data ready\n");
 
-	if (stat_reg & MICFIL_STAT_LOWFREQF_MASK) {
+	if (stat_reg & MICFIL_STAT_LOWFREQF) {
 		dev_dbg(&pdev->dev, "isr: ipg_clk_app is too low\n");
 		regmap_write_bits(micfil->regmap, REG_MICFIL_STAT,
-				  MICFIL_STAT_LOWFREQF_MASK, 1);
+				  MICFIL_STAT_LOWFREQF, 1);
 	}
 
 	return IRQ_HANDLED;
@@ -2141,37 +2141,37 @@ static int disable_hwvad(struct device *dev, bool sync)
 		/* Voice Activity Detector Reset */
 		ret |= regmap_update_bits(micfil->regmap,
 					  REG_MICFIL_VAD0_CTRL1,
-					  MICFIL_VAD0_CTRL1_RST_SHIFT,
+					  MICFIL_VAD0_CTRL1_RST,
 					  MICFIL_VAD0_CTRL1_RST);
 
 		/* Disable HWVAD */
 		ret |= regmap_update_bits(micfil->regmap,
 					  REG_MICFIL_VAD0_CTRL1,
-					  MICFIL_VAD0_CTRL1_EN_MASK,
+					  MICFIL_VAD0_CTRL1_EN,
 					  0);
 
 		/* Disable Signal Filter */
 		ret |= regmap_update_bits(micfil->regmap,
 					  REG_MICFIL_VAD0_SCONFIG,
-					  MICFIL_VAD0_SCONFIG_SFILEN_MASK,
+					  MICFIL_VAD0_SCONFIG_SFILEN,
 					  0);
 
 		/* Signal Maximum Enable */
 		ret |= regmap_update_bits(micfil->regmap,
 					  REG_MICFIL_VAD0_SCONFIG,
-					  MICFIL_VAD0_SCONFIG_SMAXEN_MASK,
+					  MICFIL_VAD0_SCONFIG_SMAXEN,
 					  0);
 
 		/* Enable pre-filter Noise & Signal */
 		ret |= regmap_update_bits(micfil->regmap,
 					  REG_MICFIL_VAD0_CTRL2,
-					  MICFIL_VAD0_CTRL2_PREFEN_MASK,
+					  MICFIL_VAD0_CTRL2_PREFEN,
 					  0);
 
 		/* Noise Decimation Enable */
 		ret |= regmap_update_bits(micfil->regmap,
 					  REG_MICFIL_VAD0_NCONFIG,
-					  MICFIL_VAD0_NCONFIG_NDECEN_MASK,
+					  MICFIL_VAD0_NCONFIG_NDECEN,
 					  0);
 
 		/* disable the module and clock only if recording
@@ -2182,7 +2182,7 @@ static int disable_hwvad(struct device *dev, bool sync)
 		/* Disable MICFIL module */
 			ret |= regmap_update_bits(micfil->regmap,
 						  REG_MICFIL_CTRL1,
-						  MICFIL_CTRL1_PDMIEN_MASK,
+						  MICFIL_CTRL1_PDMIEN,
 						  0);
 		}
 
