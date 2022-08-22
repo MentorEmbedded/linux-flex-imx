@@ -272,14 +272,6 @@ static int imx_rngc_probe(struct platform_device *pdev)
 
 	init_completion(&rngc->rng_op_done);
 
-	ret = devm_request_irq(&pdev->dev,
-			irq, imx_rngc_irq, 0, pdev->name, (void *)rngc);
-	if (ret) {
-		dev_err(rngc->dev, "Can't get interrupt working.\n");
-		goto err;
-	}
-
-
 	rngc->rng.name = pdev->name;
 	rngc->rng.init = imx_rngc_init;
 	rngc->rng.read = imx_rngc_read;
@@ -290,6 +282,13 @@ static int imx_rngc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, rngc);
 
 	imx_rngc_irq_mask_clear(rngc);
+
+	ret = devm_request_irq(&pdev->dev,
+			irq, imx_rngc_irq, 0, pdev->name, (void *)rngc);
+	if (ret) {
+		dev_err(rngc->dev, "Can't get interrupt working.\n");
+		return ret;
+	}
 
 	if (self_test) {
 		ret = imx_rngc_self_test(rngc);
