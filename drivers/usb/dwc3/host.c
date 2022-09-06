@@ -10,10 +10,14 @@
 #include <linux/acpi.h>
 #include <linux/platform_device.h>
 
+#include "../host/xhci-plat.h"
 #include "../host/xhci.h"
 
 #include "core.h"
 
+static const struct xhci_plat_priv dwc3_xhci_plat_priv = {
+	.quirks = XHCI_SKIP_PHY_INIT,
+};
 
 #define XHCI_HCSPARAMS1		0x4
 #define XHCI_PORTSC_BASE	0x400
@@ -135,6 +139,11 @@ int dwc3_host_init(struct dwc3 *dwc)
 		dev_err(dwc->dev, "couldn't add resources to xHCI device\n");
 		goto err;
 	}
+
+	ret = platform_device_add_data(xhci, &dwc3_xhci_plat_priv,
+					sizeof(dwc3_xhci_plat_priv));
+	if (ret)
+		goto err;
 
 	memset(props, 0, sizeof(struct property_entry) * ARRAY_SIZE(props));
 
