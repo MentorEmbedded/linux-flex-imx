@@ -1,0 +1,8 @@
+This file identifies the origin of this branch for the vendor kernel port to
+Sokol Flex OS. This kernel was fetched from
+
+repo: https://source.codeaurora.org/external/imx/linux-imx.git
+branch: lf-5.15.y
+hash: fa6c3168595c02bd9d5366fcc28c9e7304947a3d
+
+The kernel version at the time of this fork was: 5.15.32
