@@ -206,12 +206,12 @@ struct sdma_script_start_addrs {
 	s32 per_2_firi_addr;
 	s32 mcu_2_firi_addr;
 	s32 uart_2_per_addr;
-	s32 uart_2_mcu_ram_addr;
+	s32 uart_2_mcu_addr;
 	s32 per_2_app_addr;
 	s32 mcu_2_app_addr;
 	s32 per_2_per_addr;
 	s32 uartsh_2_per_addr;
-	s32 uartsh_2_mcu_ram_addr;
+	s32 uartsh_2_mcu_addr;
 	s32 per_2_shp_addr;
 	s32 mcu_2_shp_addr;
 	s32 ata_2_mcu_addr;
@@ -240,8 +240,8 @@ struct sdma_script_start_addrs {
 	s32 mcu_2_ecspi_addr;
 	s32 mcu_2_sai_addr;
 	s32 sai_2_mcu_addr;
-	s32 uart_2_mcu_addr;
-	s32 uartsh_2_mcu_addr;
+	s32 uart_2_mcu_rom_addr;
+	s32 uartsh_2_mcu_rom_addr;
 	s32 i2c_2_mcu_addr;
 	s32 mcu_2_i2c_addr;
 	/* End of v3 array */
@@ -563,7 +563,7 @@ static struct sdma_driver_data sdma_imx31 = {
 
 static struct sdma_script_start_addrs sdma_script_imx25 = {
 	.ap_2_ap_addr = 729,
-	.uart_2_mcu_addr = 904,
+	.uart_2_mcu_rom_addr = 904,
 	.per_2_app_addr = 1255,
 	.mcu_2_app_addr = 834,
 	.uartsh_2_mcu_addr = 1120,
@@ -590,7 +590,7 @@ static struct sdma_driver_data sdma_imx35 = {
 
 static struct sdma_script_start_addrs sdma_script_imx51 = {
 	.ap_2_ap_addr = 642,
-	.uart_2_mcu_addr = 817,
+	.uart_2_mcu_rom_addr = 817,
 	.mcu_2_app_addr = 747,
 	.mcu_2_shp_addr = 961,
 	.ata_2_mcu_addr = 1473,
@@ -611,7 +611,7 @@ static struct sdma_script_start_addrs sdma_script_imx53 = {
 	.ap_2_ap_addr = 642,
 	.app_2_mcu_addr = 683,
 	.mcu_2_app_addr = 747,
-	.uart_2_mcu_addr = 817,
+	.uart_2_mcu_rom_addr = 817,
 	.shp_2_mcu_addr = 891,
 	.mcu_2_shp_addr = 960,
 	.uartsh_2_mcu_addr = 1032,
@@ -629,7 +629,7 @@ static struct sdma_driver_data sdma_imx53 = {
 
 static struct sdma_script_start_addrs sdma_script_imx6q = {
 	.ap_2_ap_addr = 642,
-	.uart_2_mcu_addr = 817,
+	.uart_2_mcu_rom_addr = 817,
 	.mcu_2_app_addr = 747,
 	.per_2_per_addr = 6331,
 	.uartsh_2_mcu_addr = 1032,
@@ -661,7 +661,7 @@ static struct sdma_driver_data sdma_imx6ul = {
 
 static struct sdma_script_start_addrs sdma_script_imx7d = {
 	.ap_2_ap_addr = 644,
-	.uart_2_mcu_addr = 819,
+	.uart_2_mcu_rom_addr = 819,
 	.mcu_2_app_addr = 749,
 	.uartsh_2_mcu_addr = 1034,
 	.mcu_2_shp_addr = 962,
@@ -838,6 +838,24 @@ static void sdma_add_scripts(struct sdma_engine *sdma,
 	for (i = 0; i < sdma->script_number; i++)
 		if (addr_arr[i] > 0)
 			saddr_arr[i] = addr_arr[i];
+
+	/*
+	 * For compatibility with NXP internal legacy kernel before 4.19 which
+	 * is based on uart ram script and mainline kernel based on uart rom
+	 * script, both uart ram/rom scripts are present in newer sdma
+	 * firmware. Use the rom versions if they are present (V3 or newer).
+	 */
+	if (addr->uart_2_mcu_addr)
+		sdma->script_addrs->uart_2_mcu_addr = addr->uart_2_mcu_addr;
+	if (addr->uartsh_2_mcu_addr)
+		sdma->script_addrs->uartsh_2_mcu_addr = addr->uartsh_2_mcu_addr;
+
+	if (sdma->script_number >= SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V3) {
+		if (addr->uart_2_mcu_rom_addr)
+			sdma->script_addrs->uart_2_mcu_addr = addr->uart_2_mcu_rom_addr;
+		if (addr->uartsh_2_mcu_rom_addr)
+			sdma->script_addrs->uartsh_2_mcu_addr = addr->uartsh_2_mcu_rom_addr;
+	}
 }
 
 static int sdma_load_script(struct sdma_engine *sdma)
@@ -1136,7 +1154,7 @@ static void sdma_get_pc(struct sdma_channel *sdmac,
 		emi_2_per = sdma->script_addrs->mcu_2_firi_addr;
 		break;
 	case IMX_DMATYPE_UART:
-		per_2_emi = sdma->script_addrs->uart_2_mcu_addr;
+		per_2_emi = sdma->script_addrs->uart_2_mcu_rom_addr;
 		emi_2_per = sdma->script_addrs->mcu_2_app_addr;
 		break;
 	case IMX_DMATYPE_UART_SP:
@@ -2278,7 +2296,7 @@ static int sdma_event_remap(struct sdma_engine *sdma)
 	u32 reg, val, shift, num_map, i;
 	int ret = 0;
 
-	if (IS_ERR(np) || IS_ERR(gpr_np))
+	if (IS_ERR(np) || !gpr_np)
 		goto out;
 
 	event_remap = of_find_property(np, propname, NULL);
@@ -2326,7 +2344,7 @@ static int sdma_event_remap(struct sdma_engine *sdma)
 	}
 
 out:
-	if (!IS_ERR(gpr_np))
+	if (gpr_np)
 		of_node_put(gpr_np);
 
 	return ret;
@@ -2763,7 +2781,7 @@ MODULE_DESCRIPTION("i.MX SDMA driver");
 #if IS_ENABLED(CONFIG_SOC_IMX6Q)
 MODULE_FIRMWARE("imx/sdma/sdma-imx6q.bin");
 #endif
-#if IS_ENABLED(CONFIG_SOC_IMX7D)
+#if IS_ENABLED(CONFIG_SOC_IMX7D) || IS_ENABLED(CONFIG_SOC_IMX8M)
 MODULE_FIRMWARE("imx/sdma/sdma-imx7d.bin");
 #endif
 MODULE_LICENSE("GPL");
