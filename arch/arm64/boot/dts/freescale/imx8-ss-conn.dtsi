@@ -76,9 +76,9 @@ conn_subsys: bus@5b000000 {
 		interrupts = <GIC_SPI 232 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x5b010000 0x10000>;
 		clocks = <&sdhc0_lpcg 1>,
-			 <&sdhc0_lpcg 0>,
-			 <&sdhc0_lpcg 2>;
-		clock-names = "ipg", "per", "ahb";
+			 <&sdhc0_lpcg 2>,
+			 <&sdhc0_lpcg 0>;
+		clock-names = "ipg", "ahb", "per";
 		assigned-clocks = <&clk IMX_SC_R_SDHC_0 IMX_SC_PM_CLK_PER>;
 		assigned-clock-rates = <400000000>;
 		power-domains = <&pd IMX_SC_R_SDHC_0>;
@@ -91,9 +91,9 @@ conn_subsys: bus@5b000000 {
 		interrupts = <GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x5b020000 0x10000>;
 		clocks = <&sdhc1_lpcg 1>,
-			 <&sdhc1_lpcg 0>,
-			 <&sdhc1_lpcg 2>;
-		clock-names = "ipg", "per", "ahb";
+			 <&sdhc1_lpcg 2>,
+			 <&sdhc1_lpcg 0>;
+		clock-names = "ipg", "ahb", "per";
 		assigned-clocks = <&clk IMX_SC_R_SDHC_1 IMX_SC_PM_CLK_PER>;
 		assigned-clock-rates = <200000000>;
 		power-domains = <&pd IMX_SC_R_SDHC_1>;
@@ -106,9 +106,9 @@ conn_subsys: bus@5b000000 {
 		interrupts = <GIC_SPI 234 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x5b030000 0x10000>;
 		clocks = <&sdhc2_lpcg 1>,
-			 <&sdhc2_lpcg 0>,
-			 <&sdhc2_lpcg 2>;
-		clock-names = "ipg", "per", "ahb";
+			 <&sdhc2_lpcg 2>,
+			 <&sdhc2_lpcg 0>;
+		clock-names = "ipg", "ahb", "per";
 		assigned-clocks = <&clk IMX_SC_R_SDHC_2 IMX_SC_PM_CLK_PER>;
 		assigned-clock-rates = <200000000>;
 		power-domains = <&pd IMX_SC_R_SDHC_2>;
