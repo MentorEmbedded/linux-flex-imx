@@ -418,12 +418,25 @@ static int fxos8700_get_data(struct fxos8700_data *data, int chan_type,
 {
 	u8 base, offset;
 	s16 tmp;
-	enum fxos8700_sensor type = fxos8700_to_sensor(chan_type);
 	u8 tmp_data[2];
 	u16 native_data;
 	int ret;
 
-	base = type ? FXOS8700_M_OUT_X_MSB : FXOS8700_OUT_X_MSB;
+	/*
+	 * Different register base addresses varies with channel types.
+	 * This bug hasn't been noticed before because using an enum is
+	 * really hard to read. Use an a switch statement to take over that.
+	 */
+	switch (chan_type) {
+	case IIO_ACCEL:
+		base = FXOS8700_OUT_X_MSB;
+		break;
+	case IIO_MAGN:
+		base = FXOS8700_M_OUT_X_MSB;
+		break;
+	default:
+		return -EINVAL;
+	}
 	offset = axis - IIO_MOD_X;
 
 	ret = regmap_bulk_read(data->regmap, base + offset, &tmp_data[0], 2);
