@@ -354,17 +354,19 @@ static int fxos8700_set_scale(struct fxos8700_data *data,
 		return -EINVAL;
 	}
 
+	/*
+	 * When device is in active mode, it failed to set an ACCEL
+	 * full-scale range(2g/4g/8g) in FXOS8700_XYZ_DATA_CFG.
+	 * This is not align with the datasheet, but it is a fxos8700
+	 * chip behavier. Set the device in standby mode before setting
+	 * an ACCEL full-scale range.
+	 */
 	ret = regmap_read(data->regmap, FXOS8700_CTRL_REG1, &val);
 	if (ret)
 		return ret;
 
 	active_mode = val & FXOS8700_ACTIVE;
-
 	if (active_mode) {
-		/*
-		 * The device must be in standby mode to change any of the
-		 * other fields within CTRL_REG1
-		 */
 		ret = regmap_write(data->regmap, FXOS8700_CTRL_REG1,
 				   val & ~FXOS8700_ACTIVE);
 		if (ret)
@@ -382,8 +384,8 @@ static int fxos8700_set_scale(struct fxos8700_data *data,
 			    fxos8700_accel_scale[i].bits);
 	if (ret)
 		return ret;
-	return regmap_update_bits(data->regmap, FXOS8700_CTRL_REG1,
-				  FXOS8700_ACTIVE, active_mode);
+	return regmap_write(data->regmap, FXOS8700_CTRL_REG1,
+				  active_mode);
 }
 
 static int fxos8700_get_scale(struct fxos8700_data *data,
@@ -620,14 +622,17 @@ static int fxos8700_chip_init(struct fxos8700_data *data, bool use_spi)
 	if (ret)
 		return ret;
 
-	/* Set for max full-scale range (+/-8G) */
+	/*
+	 * Set max full-scale range (+/-8G) for ACCEL sensor in chip
+	 * initialization then activate the device.
+	 */
 	ret = regmap_write(data->regmap, FXOS8700_XYZ_DATA_CFG, MODE_8G);
-	/* Max ODR (800Hz individual or 400Hz hybrid), active mode */
 	if (ret)
 		return ret;
 
+	/* Max ODR (800Hz individual or 400Hz hybrid), active mode */
 	return regmap_write(data->regmap, FXOS8700_CTRL_REG1,
-			   FXOS8700_CTRL_ODR_MAX << 3 | FXOS8700_ACTIVE);
+			   FXOS8700_CTRL_ODR_MAX | FXOS8700_ACTIVE);
 }
 
 static void fxos8700_chip_uninit(void *data)
