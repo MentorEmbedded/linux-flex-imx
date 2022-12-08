@@ -417,6 +417,7 @@ static int fxos8700_get_data(struct fxos8700_data *data, int chan_type,
 			     int axis, int *val)
 {
 	u8 base, offset;
+	s16 tmp;
 	enum fxos8700_sensor type = fxos8700_to_sensor(chan_type);
 	u8 tmp_data[2];
 	u16 native_data;
@@ -430,15 +431,33 @@ static int fxos8700_get_data(struct fxos8700_data *data, int chan_type,
 		return -EIO;
 
 
-	data->buf = ((tmp_data[1] << 8) & 0xff00) | tmp_data[0];
+	/*
+	 * Convert to native endianness. The accel data and magn data
+	 * are signed, so a forced type conversion is needed.
+	 */
+	tmp = be16_to_cpu(data->buf);
+
+	/*
+	 * ACCEL output data registers contain the X-axis, Y-axis, and Z-axis
+	 * 14-bit left-justified sample data and MAGN output data registers
+	 * contain the X-axis, Y-axis, and Z-axis 16-bit sample data. Apply
+	 * a signed 2 bits right shift to the readback raw data from ACCEL
+	 * output data register and keep that from MAGN sensor as the origin.
+	 * Value should be extended to 32 bit.
+	 */
+	switch (chan_type) {
+	case IIO_ACCEL:
+		tmp = tmp >> 2;
+		break;
+	case IIO_MAGN:
+		/* Nothing to do */
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	/* Convert to native endianness */
-	native_data = be16_to_cpu(data->buf);
-
-	/*accel raw data only has 14 bit */
-	if (!type)
-		native_data = native_data >> 2;
-
-	*val = sign_extend32(native_data, 15);
+	*val = sign_extend32(tmp, 15);
 
 	return 0;
 }
