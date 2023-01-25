@@ -2016,6 +2016,8 @@ static int dpaa2_eth_poll(struct napi_struct *napi, int budget)
 		    txconf_cleaned >= DPAA2_ETH_TXCONF_PER_NAPI ||
 		    work_done_zc) {
 			work_done = budget;
+			if (ch->xdp.res & XDP_REDIRECT)
+				xdp_do_flush();
 			goto out;
 		}
 	} while (store_cleaned);
@@ -2025,6 +2027,9 @@ static int dpaa2_eth_poll(struct napi_struct *napi, int budget)
 				ch->stats.bytes_per_cdan);
 	ch->stats.frames_per_cdan = 0;
 	ch->stats.bytes_per_cdan = 0;
+
+	if (ch->xdp.res & XDP_REDIRECT)
+		xdp_do_flush();
 
 	/* We didn't consume the entire budget, so finish napi and
 	 * re-enable data availability notifications
@@ -2055,9 +2060,7 @@ out:
 		txc_fq->dq_bytes = 0;
 	}
 
-	if (ch->xdp.res & XDP_REDIRECT)
-		xdp_do_flush_map();
-	else if (rx_cleaned && ch->xdp.res & XDP_TX)
+	if (rx_cleaned && ch->xdp.res & XDP_TX)
 		dpaa2_eth_xdp_tx_flush(priv, ch, &priv->fq[flowid]);
 
 	if (!ch->xsk_zc)
