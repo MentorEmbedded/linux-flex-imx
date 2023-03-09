@@ -11,7 +11,6 @@
 #include <linux/platform_device.h>
 
 #include "../host/xhci.h"
-
 #include "core.h"
 
 
