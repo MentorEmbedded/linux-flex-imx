@@ -882,11 +882,17 @@ static unsigned int lpuart32_tx_empty(struct uart_port *port)
 			struct lpuart_port, port);
 	unsigned long stat = lpuart32_read(port, UARTSTAT);
 	unsigned long sfifo = lpuart32_read(port, UARTFIFO);
+	unsigned long ctrl = lpuart32_read(port, UARTCTRL);
 
 	if (sport->dma_tx_in_progress)
 		return 0;
 
-	if (stat & UARTSTAT_TC && sfifo & UARTFIFO_TXEMPT)
+	/*
+	 * LPUART Transmission Complete Flag may never be set while queuing a break
+	 * character, so avoid checking for transmission complete when UARTCTRL_SBK
+	 * is asserted.
+	 */
+	if ((stat & UARTSTAT_TC && sfifo & UARTFIFO_TXEMPT) || ctrl & UARTCTRL_SBK)
 		return TIOCSER_TEMT;
 
 	return 0;
@@ -1366,7 +1372,7 @@ static void lpuart_get_rx_dma_rng_len(struct lpuart_port *sport)
 	 * 10ms at any baud rate.
 	 */
 	sport->rx_dma_rng_buf_len = (DMA_RX_TIMEOUT * baud /  bits / 1000) * 2;
-	sport->rx_dma_rng_buf_len = (1 << (fls(sport->rx_dma_rng_buf_len) - 1));
+	sport->rx_dma_rng_buf_len = (1 << fls(sport->rx_dma_rng_buf_len));
 	if (sport->rx_dma_rng_buf_len < 16)
 		sport->rx_dma_rng_buf_len = 16;
 }
@@ -1418,6 +1424,14 @@ static inline int lpuart_start_rx_dma(struct lpuart_port *sport)
 	return ret;
 }
 
+static void lpuart_del_timer_sync(struct lpuart_port *sport)
+{
+	if (sport->dma_eeop)
+		return;
+
+	del_timer_sync(&sport->lpuart_timer);
+}
+
 static void lpuart_dma_rx_free(struct uart_port *port, bool dma_terminate)
 {
 	struct lpuart_port *sport = container_of(port,
@@ -1426,7 +1440,7 @@ static void lpuart_dma_rx_free(struct uart_port *port, bool dma_terminate)
 
 	if (dma_terminate)
 		dmaengine_terminate_sync(sport->dma_rx_chan);
-
+	lpuart_del_timer_sync(sport);
 	dma_unmap_sg(chan->device->dev, &sport->rx_sgl, 1, DMA_FROM_DEVICE);
 	kfree(sport->rx_ring.buf);
 	sport->rx_ring.tail = 0;
@@ -1603,12 +1617,32 @@ static void lpuart_break_ctl(struct uart_port *port, int break_state)
 
 static void lpuart32_break_ctl(struct uart_port *port, int break_state)
 {
-	unsigned long temp;
+	unsigned long temp, modem;
+	struct tty_struct *tty;
+	unsigned int cflag = 0;
+
+	tty = tty_port_tty_get(&port->state->port);
+	if (tty) {
+		cflag = tty->termios.c_cflag;
+		tty_kref_put(tty);
+	}
 
 	temp = lpuart32_read(port, UARTCTRL) & ~UARTCTRL_SBK;
+	modem = lpuart32_read(port, UARTMODIR);
 
-	if (break_state != 0)
+	if (break_state != 0) {
 		temp |= UARTCTRL_SBK;
+		/*
+		 * LPUART CTS has higher priority than SBK, need to disable CTS before
+		 * asserting SBK to avoid any interference if flow control is enabled.
+		 */
+		if (cflag & CRTSCTS && modem & UARTMODIR_TXCTSE)
+			lpuart32_write(port, modem & ~UARTMODIR_TXCTSE, UARTMODIR);
+	} else {
+		/* Re-enable the CTS when break off. */
+		if (cflag & CRTSCTS && !(modem & UARTMODIR_TXCTSE))
+			lpuart32_write(port, modem | UARTMODIR_TXCTSE, UARTMODIR);
+	}
 
 	lpuart32_write(port, temp, UARTCTRL);
 }
@@ -1718,14 +1752,6 @@ static void rx_dma_timer_init(struct lpuart_port *sport)
 	timer_setup(&sport->lpuart_timer, lpuart_timer_func, 0);
 	sport->lpuart_timer.expires = jiffies + sport->dma_rx_timeout;
 	add_timer(&sport->lpuart_timer);
-}
-
-static void lpuart_del_timer_sync(struct lpuart_port *sport)
-{
-	if (sport->dma_eeop)
-		return;
-
-	del_timer_sync(&sport->lpuart_timer);
 }
 
 static void lpuart_request_dma(struct lpuart_port *sport)
@@ -1932,7 +1958,6 @@ static int lpuart32_startup(struct uart_port *port)
 static void lpuart_dma_shutdown(struct lpuart_port *sport)
 {
 	if (sport->lpuart_dma_rx_use) {
-		lpuart_del_timer_sync(sport);
 		lpuart_dma_rx_free(&sport->port, true);
 		sport->lpuart_dma_rx_use = false;
 	}
@@ -1982,7 +2007,7 @@ static void lpuart32_shutdown(struct uart_port *port)
 
 	spin_lock_irqsave(&port->lock, flags);
 
-	/* clear statue */
+	/* clear status */
 	temp = lpuart32_read(&sport->port, UARTSTAT);
 	lpuart32_write(&sport->port, temp, UARTSTAT);
 
@@ -2100,7 +2125,6 @@ lpuart_set_termios(struct uart_port *port, struct ktermios *termios,
 	 */
 	if (old && sport->lpuart_dma_rx_use) {
 		sport->dma_rx_chan_active = false;
-		lpuart_del_timer_sync(sport);
 		lpuart_dma_rx_free(&sport->port, true);
 	}
 
@@ -2341,7 +2365,6 @@ lpuart32_set_termios(struct uart_port *port, struct ktermios *termios,
 	 */
 	if (old && sport->lpuart_dma_rx_use) {
 		sport->dma_rx_chan_active = false;
-		lpuart_del_timer_sync(sport);
 		lpuart_dma_rx_free(&sport->port, true);
 	}
 
@@ -2370,9 +2393,15 @@ lpuart32_set_termios(struct uart_port *port, struct ktermios *termios,
 	/* update the per-port timeout */
 	uart_update_timeout(port, termios->c_cflag, baud);
 
-	/* wait transmit engin complete */
-	lpuart32_write(&sport->port, 0, UARTMODIR);
-	lpuart32_wait_bit_set(&sport->port, UARTSTAT, UARTSTAT_TC);
+	/*
+	 * LPUART Transmission Complete Flag may never be set while queuing a break
+	 * character, so skip waiting for transmission complete when UARTCTRL_SBK is
+	 * asserted.
+	 */
+	if (!(old_ctrl & UARTCTRL_SBK)) {
+		lpuart32_write(&sport->port, 0, UARTMODIR);
+		lpuart32_wait_bit_set(&sport->port, UARTSTAT, UARTSTAT_TC);
+	}
 
 	/* disable transmit and receive */
 	lpuart32_write(&sport->port, old_ctrl & ~(UARTCTRL_TE | UARTCTRL_RE),
@@ -3178,7 +3207,7 @@ static int __maybe_unused lpuart_suspend(struct device *dev)
 			 * EDMA driver during suspend will forcefully release any
 			 * non-idle DMA channels. If port wakeup is enabled or if port
 			 * is console port or 'no_console_suspend' is set the Rx DMA
-			 * cannot resume as as expected, hence gracefully release the
+			 * cannot resume as expected, hence gracefully release the
 			 * Rx DMA path before suspend and start Rx DMA path on resume.
 			 */
 			lpuart_del_timer_sync(sport);
