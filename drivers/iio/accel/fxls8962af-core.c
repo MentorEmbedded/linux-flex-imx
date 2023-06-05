@@ -487,8 +487,7 @@ static int fxls8962af_set_watermark(struct iio_dev *indio_dev, unsigned val)
 		.sign = 's', \
 		.realbits = 12, \
 		.storagebits = 16, \
-		.shift = 4, \
-		.endianness = IIO_BE, \
+		.endianness = IIO_LE, \
 	}, \
 }
 
