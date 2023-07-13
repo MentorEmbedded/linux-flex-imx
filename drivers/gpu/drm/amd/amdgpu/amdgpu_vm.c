@@ -983,7 +983,6 @@ static int amdgpu_vm_pt_create(struct amdgpu_device *adev,
 		return r;
 	}
 
-	(*vmbo)->shadow->parent = amdgpu_bo_ref(bo);
 	amdgpu_bo_add_to_shadow_list(*vmbo);
 
 	return 0;
@@ -3274,6 +3273,10 @@ int amdgpu_vm_ioctl(struct drm_device *dev, void *data, struct drm_file *filp)
 	struct amdgpu_fpriv *fpriv = filp->driver_priv;
 	long timeout = msecs_to_jiffies(2000);
 	int r;
+
+	/* No valid flags defined yet */
+	if (args->in.flags)
+		return -EINVAL;
 
 	switch (args->in.op) {
 	case AMDGPU_VM_OP_RESERVE_VMID:
