@@ -48,17 +48,9 @@ struct ls_pcie_ep {
 	const struct ls_pcie_ep_drvdata *drvdata;
 	u8				max_speed;
 	u8				max_width;
-	bool				big_endian;
 	int				irq;
-};
-
-static int ls_pcie_establish_link(struct dw_pcie *pci)
-{
-	return 0;
-}
-
-static const struct dw_pcie_ops dw_ls_pcie_ep_ops = {
-	.start_link = ls_pcie_establish_link,
+	u32				lnkcap;
+	bool				big_endian;
 };
 
 static u32 ls_lut_readl(struct ls_pcie_ep *pcie, u32 offset)
@@ -87,12 +79,24 @@ static irqreturn_t ls_pcie_ep_event_handler(int irq, void *dev_id)
 	struct ls_pcie_ep *pcie = (struct ls_pcie_ep *)dev_id;
 	struct dw_pcie *pci = pcie->pci;
 	u32 val;
+	u8 offset;
 
 	val = ls_lut_readl(pcie, PEX_PF0_PME_MES_DR);
 	if (!val)
 		return IRQ_NONE;
 
 	if (val & PEX_PF0_PME_MES_DR_LUD)
+		offset = dw_pcie_find_capability(pci, PCI_CAP_ID_EXP);
+		/*
+		 * The values of the Maximum Link Width and Supported Link
+		 * Speed from the Link Capabilities Register will be lost
+		 * during link down or hot reset. Restore initial value
+		 * that configured by the Reset Configuration Word (RCW).
+		 */
+                dw_pcie_dbi_ro_wr_en(pci);
+                dw_pcie_writel_dbi(pci, offset + PCI_EXP_LNKCAP, pcie->lnkcap);
+                dw_pcie_dbi_ro_wr_dis(pci);
+
 		dev_info(pci->dev, "Detect the link up state !\n");
 	else if (val & PEX_PF0_PME_MES_DR_LDD)
 		dev_info(pci->dev, "Detect the link down state !\n");
@@ -204,19 +208,16 @@ static const struct dw_pcie_ep_ops ls_pcie_ep_ops = {
 
 static const struct ls_pcie_ep_drvdata ls1_ep_drvdata = {
 	.ops = &ls_pcie_ep_ops,
-	.dw_pcie_ops = &dw_ls_pcie_ep_ops,
 };
 
 static const struct ls_pcie_ep_drvdata ls2_ep_drvdata = {
 	.func_offset = 0x20000,
 	.ops = &ls_pcie_ep_ops,
-	.dw_pcie_ops = &dw_ls_pcie_ep_ops,
 };
 
 static const struct ls_pcie_ep_drvdata lx2_ep_drvdata = {
 	.func_offset = 0x8000,
 	.ops = &ls_pcie_ep_ops,
-	.dw_pcie_ops = &dw_ls_pcie_ep_ops,
 };
 
 static const struct of_device_id ls_pcie_ep_of_match[] = {
@@ -235,6 +236,7 @@ static int __init ls_pcie_ep_probe(struct platform_device *pdev)
 	struct ls_pcie_ep *pcie;
 	struct pci_epc_features *ls_epc;
 	struct resource *dbi_base;
+	u8 offset;
 	int ret;
 
 	pcie = devm_kzalloc(dev, sizeof(*pcie), GFP_KERNEL);
@@ -278,6 +280,9 @@ static int __init ls_pcie_ep_probe(struct platform_device *pdev)
 		dev_warn(dev, "Failed to set 64-bit DMA mask.\n");
 
 	platform_set_drvdata(pdev, pcie);
+
+	offset = dw_pcie_find_capability(pci, PCI_CAP_ID_EXP);
+	pcie->lnkcap = dw_pcie_readl_dbi(pci, offset + PCI_EXP_LNKCAP);
 
 	ret = dw_pcie_ep_init(&pci->ep);
 	if (ret)
